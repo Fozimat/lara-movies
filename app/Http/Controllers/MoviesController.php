@@ -7,6 +7,13 @@ use Illuminate\Support\Facades\Http;
 
 class MoviesController extends Controller
 {
+    private $url = 'https://api.themoviedb.org/3/';
+    private $token;
+
+    public function __construct()
+    {
+        $this->token = config('services.tmdb.token');
+    }
     /**
      * Display a listing of the resource.
      *
@@ -14,13 +21,21 @@ class MoviesController extends Controller
      */
     public function index()
     {
-        $popularMovies = Http::withToken(config('services.tmdb.token'))
-            ->get('https://api.themoviedb.org/3/movie/popular')
+        $popularMovies = Http::withToken($this->token)
+            ->get($this->url . 'movie/popular')
+            ->json()['results'];
+        $genresMovies = Http::withToken($this->token)
+            ->get($this->url . 'genre/movie/list')
+            ->json()['genres'];
+        $nowPlayingMovies =  Http::withToken($this->token)
+            ->get($this->url . 'movie/now_playing')
             ->json()['results'];
 
-        // dd($popularMovies);
+        $genres = collect($genresMovies)->mapWithKeys(function ($genre) {
+            return [$genre['id'] => $genre['name']];
+        });
 
-        return view('index', compact(['popularMovies']));
+        return view('index', compact(['popularMovies', 'genres', 'nowPlayingMovies']));
     }
 
     /**
@@ -52,7 +67,10 @@ class MoviesController extends Controller
      */
     public function show($id)
     {
-        //
+        $movie = Http::withToken($this->token)
+            ->get($this->url . 'movie/' . $id . '?append_to_response=credits,images,videos')
+            ->json();
+        return view('show', compact(['movie']));
     }
 
     /**
