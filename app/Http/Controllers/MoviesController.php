@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\ViewModels\MoviesViewModel;
+use App\ViewModels\MovieViewModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
@@ -24,18 +26,22 @@ class MoviesController extends Controller
         $popularMovies = Http::withToken($this->token)
             ->get($this->url . 'movie/popular')
             ->json()['results'];
-        $genresMovies = Http::withToken($this->token)
-            ->get($this->url . 'genre/movie/list')
-            ->json()['genres'];
+
         $nowPlayingMovies =  Http::withToken($this->token)
             ->get($this->url . 'movie/now_playing')
             ->json()['results'];
 
-        $genres = collect($genresMovies)->mapWithKeys(function ($genre) {
-            return [$genre['id'] => $genre['name']];
-        });
+        $genres = Http::withToken($this->token)
+            ->get($this->url . 'genre/movie/list')
+            ->json()['genres'];
 
-        return view('index', compact(['popularMovies', 'genres', 'nowPlayingMovies']));
+        $viewModel = new MoviesViewModel(
+            $popularMovies,
+            $nowPlayingMovies,
+            $genres
+        );
+
+        return view('index', $viewModel);
     }
 
     /**
@@ -70,7 +76,10 @@ class MoviesController extends Controller
         $movie = Http::withToken($this->token)
             ->get($this->url . 'movie/' . $id . '?append_to_response=credits,images,videos')
             ->json();
-        return view('show', compact(['movie']));
+
+        $viewModel = new MovieViewModel($movie);
+
+        return view('show', $viewModel);
     }
 
     /**
